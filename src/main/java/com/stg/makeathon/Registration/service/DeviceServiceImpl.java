@@ -11,11 +11,13 @@ import com.stg.makeathon.Registration.repository.DeviceRepository;
 import com.stg.makeathon.Registration.util.DeviceUtil;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import javassist.NotFoundException;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -58,7 +60,7 @@ public class DeviceServiceImpl implements DeviceService {
       return deviceUtil.mapDeviceToDeviceReponse(device);
     }
 
-    return addToThingsBoard(device);
+    return addToPlatform(device);
   }
 
   @Override
@@ -70,13 +72,65 @@ public class DeviceServiceImpl implements DeviceService {
   }
 
   @Override
-  public String update(DeviceRequest deviceRequest) {
-    return null;
+  public DeviceResponse update(DeviceRequest deviceRequest) {
+    Device device = deviceRepository.findDeviceByHardwareId(deviceRequest.getHardwareId());
+    deviceUtil.mapDeviceRequestToDevice(deviceRequest, device);
+    deviceRepository.save(device);
+    return deviceUtil.mapDeviceToDeviceReponse(device);
   }
 
   @Override
-  public String deleteDevice(String deviceId) {
-    return null;
+  public void deleteDevice(String hardwareId) {
+    Device device = deviceRepository.findDeviceByHardwareId(hardwareId);
+    if (!Strings.isBlank(device.getAccessToken()) && (device.getSource() == null || device
+        .getSource().equals("thboard"))) {
+      deleteFromThingsBoard(device);
+    }
+    deviceRepository.delete(device);
+  }
+
+  @Override
+  public DeviceResponse clearToken(DeviceRequest deviceRequest) {
+    Device device = deviceRepository.findDeviceByHardwareId(deviceRequest.getHardwareId());
+    if (!Strings.isBlank(device.getAccessToken()) && (device.getSource() == null || device
+        .getSource().equals("thboard"))) {
+      deleteFromThingsBoard(device);
+    }
+    device.setAccessToken(null);
+    device.setTbDeviceId(null);
+    return deviceUtil.mapDeviceToDeviceReponse(deviceRepository.save(device));
+  }
+
+  private void deleteFromThingsBoard(Device device) {
+    ThingsBoardLogin thingsBoardLogin = new ThingsBoardLogin();
+    thingsBoardLogin.setPassword(device.getServicePassword());
+    thingsBoardLogin.setUsername(device.getServiceUserName());
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.APPLICATION_JSON);
+    headers.set("X-Authorization", "Bearer " + getToken(thingsBoardLogin));
+
+    ThingsBoardDeviceRequest request = deviceUtil.mapDeviceToThingsBoardDeviceRequest(device);
+
+    HttpEntity<ThingsBoardDeviceRequest> entity = new HttpEntity<>(request, headers);
+    String url = thingsBoardDeviceUrl + "/" + device.getTbDeviceId();
+    restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+  }
+
+  private DeviceResponse addToPlatform(Device device) {
+    if (device.getSource() == null || device.getSource().equals("thboard")) {
+      device.setSource("thboard");
+      return addToThingsBoard(device);
+    }
+    device.setSource("openPlatform");
+    return addToOpenPlatform(device);
+  }
+
+  private DeviceResponse addToOpenPlatform(Device device) {
+    String accessToken = deviceUtil.getAccessToken();
+    String deviceId = UUID.randomUUID().toString();
+    device.setTbDeviceId(deviceId);
+    device.setAccessToken(accessToken);
+    return deviceUtil.mapDeviceToDeviceReponse(deviceRepository.save(device));
   }
 
   private DeviceResponse addToThingsBoard(Device device) {

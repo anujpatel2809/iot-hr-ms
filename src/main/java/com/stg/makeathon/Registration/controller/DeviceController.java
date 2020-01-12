@@ -32,7 +32,7 @@ public class DeviceController {
       @RequestHeader(value = "source", required = true) String optionalHeader)
       throws Exception {
     System.out.println("Request coming");
-    if (null == optionalHeader || optionalHeader.equals("gateway")) {
+    if (null == optionalHeader || !optionalHeader.equals("gateway")) {
       throw new Exception("Bad Request");
     }
     return deviceService.getToken(hardwareId);
@@ -43,13 +43,18 @@ public class DeviceController {
     deviceService.addDevice(deviceRequests);
   }
 
+  @PostMapping("/clearToken")
+  public DeviceResponse clearToken(@RequestBody DeviceRequest deviceRequest) {
+    return deviceService.clearToken(deviceRequest);
+  }
+
   @PutMapping
-  public String addDevice(@RequestBody DeviceRequest deviceRequest) {
+  public DeviceResponse upDateDevice(@RequestBody DeviceRequest deviceRequest) {
     return deviceService.update(deviceRequest);
   }
 
   @DeleteMapping("/{assetId}")
-  public String deleteDevice(@PathVariable("assetId") String hardwareId) {
-    return deviceService.deleteDevice(hardwareId);
+  public void deleteDevice(@PathVariable("assetId") String hardwareId) {
+    deviceService.deleteDevice(hardwareId);
   }
 }

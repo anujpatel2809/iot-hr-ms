@@ -14,5 +14,6 @@ public class DeviceResponse {
   private Boolean status;
   private String type;
   private String name;
+  private String source;
 
 }

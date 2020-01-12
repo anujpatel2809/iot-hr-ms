@@ -14,8 +14,9 @@ public interface DeviceService {
 
   void addDevice(List<DeviceRequest> deviceRequests);
 
-  String update(DeviceRequest deviceRequest);
+  DeviceResponse update(DeviceRequest deviceRequest);
 
-  String deleteDevice(String deviceId);
+  void deleteDevice(String hardwareId);
 
+  DeviceResponse clearToken(DeviceRequest deviceRequest);
 }

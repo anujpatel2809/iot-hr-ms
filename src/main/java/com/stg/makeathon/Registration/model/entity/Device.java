@@ -27,4 +27,5 @@ public class Device {
   private String servicePassword;
   private String entityType;
   private String tenantId;
+  private String source;
 }

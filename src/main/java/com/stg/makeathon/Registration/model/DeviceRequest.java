@@ -17,4 +17,5 @@ public class DeviceRequest {
   private String servicePassword;
   private String entityType;
   private String tenantId;
+  private String source;
 }
